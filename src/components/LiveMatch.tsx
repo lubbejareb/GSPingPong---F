@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../hooks/useApp';
-import { Clock, Target, AlertTriangle, Flag } from 'lucide-react';
+import { Target, AlertTriangle, Flag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { GameResultDialog } from './GameResultDialog';
 import { WinnerSelectionDialog } from './WinnerSelectionDialog';
@@ -149,15 +149,6 @@ export function LiveMatch() {
     );
   }
 
-  const elapsedTime = currentMatch.startTime 
-    ? Math.floor((Date.now() - currentMatch.startTime.getTime()) / 1000)
-    : 0;
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
   
 
 
@@ -192,13 +183,7 @@ export function LiveMatch() {
                 <span className="text-lg">🏓</span>
               </div>
               <h2 className="text-2xl font-bold">Live Match</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-3 py-1">
-                <Clock size={16} />
-                <span className="font-mono text-lg font-semibold">{formatTime(elapsedTime)}</span>
-              </div>
-            </div>
+            </div>          
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
