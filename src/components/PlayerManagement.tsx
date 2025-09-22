@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../hooks/useApp';
 import type { Player } from '../types';
-import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ export function PlayerManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [addPlayerMessage, setAddPlayerMessage] = useState('');
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,13 +125,31 @@ export function PlayerManagement() {
       </CardHeader>
       <CardContent className="space-y-4">
 
-      {/* Admin Login Form */}
+      {/* Admin Login Toggle Button */}
       {!isAuthenticated && (
-        <Card className="border border-amber-200 shadow-sm bg-amber-50/50 backdrop-blur-sm">
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLoginForm(!showLoginForm)}
+            className="flex items-center gap-2 text-gray-300 border-gray-200 hover:bg-gray-100 w-full justify-between"
+          >
+            <div className="flex items-center gap-1">
+              <Lock size={14} />
+              <span>Admin Access</span>
+            </div>
+            {showLoginForm ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </Button>
+        </div>
+      )}
+
+      {/* Admin Login Form */}
+      {!isAuthenticated && showLoginForm && (
+        <Card className="border border-gray-200 shadow-sm bg-white-50/50 backdrop-blur-sm mb-4">
           <CardContent className="p-4">
             <form onSubmit={handleLogin} className="space-y-3">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-amber-700 flex items-center gap-1">
+                <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
                   <Lock size={12} />
                   Admin Login Required
                 </label>
@@ -140,7 +159,7 @@ export function PlayerManagement() {
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     placeholder="Username"
-                    className="border-amber-200 focus:border-amber-500 focus:ring-amber-500/20"
+                    className="border-gray-200 focus:border-gray-500 focus:ring-amber-500/20"
                   />
                   <div className="relative">
                     <Input
@@ -148,7 +167,7 @@ export function PlayerManagement() {
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Password"
-                      className="border-amber-200 focus:border-amber-500 focus:ring-amber-500/20 pr-10"
+                      className="border-gray-200 focus:border-gray-500 focus:ring-amber-500/20 pr-10"
                     />
                     <Button
                       type="button"
@@ -166,7 +185,7 @@ export function PlayerManagement() {
                     {loginError}
                   </p>
                 )}
-                <Button type="submit" size="sm" className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                <Button type="submit" size="sm" className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-green-600">
                   <Lock className="mr-1 h-3 w-3" />
                   Login as Admin
                 </Button>

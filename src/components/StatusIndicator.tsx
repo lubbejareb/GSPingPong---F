@@ -1,39 +1,13 @@
 import { useApp } from '../hooks/useApp';
-import { Loader2, CheckCircle, AlertCircle, CloudDownload, CloudUpload } from 'lucide-react';
+import { CheckCircle, } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 export function StatusIndicator() {
   const { state } = useApp();
   const { isLoading, isSaving, lastSaved, error } = state;
 
-  if (error) {
-    return (
-      <Badge variant="destructive" className="flex items-center gap-1">
-        <AlertCircle size={12} />
-        Error: {error}
-      </Badge>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Badge variant="secondary" className="flex items-center gap-1 animate-pulse">
-        <CloudDownload size={12} />
-        Loading data...
-      </Badge>
-    );
-  }
-
-  if (isSaving) {
-    return (
-      <Badge variant="secondary" className="flex items-center gap-1">
-        <Loader2 size={12} className="animate-spin" />
-        Saving...
-      </Badge>
-    );
-  }
-
-  if (lastSaved) {
+  // Only show the indicator when it's in the "Saved" state
+  if (lastSaved && !isLoading && !isSaving && !error) {
     const savedDate = new Date(lastSaved);
     const timeAgo = getTimeAgo(savedDate);
     
@@ -45,12 +19,8 @@ export function StatusIndicator() {
     );
   }
 
-  return (
-    <Badge variant="outline" className="flex items-center gap-1">
-      <CloudUpload size={12} />
-      No save data
-    </Badge>
-  );
+  // Return null for all other states to hide the component
+  return null;
 }
 
 function getTimeAgo(date: Date): string {
