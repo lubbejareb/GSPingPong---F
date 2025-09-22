@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../hooks/useApp';
 import type { Player } from '../types';
 import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff, ChevronDown, ChevronUp, Save, Clock } from 'lucide-react';

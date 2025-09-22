@@ -33,6 +33,7 @@ const STORAGE_KEY = 'pingpong-game-data';
 
 export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promise<SaveResponse> => {
   try {
+    console.log('🔄 Save operation initiated');
     const dataToSave: GameData = {
       ...gameData,
       lastSaved: new Date().toISOString()
@@ -56,6 +57,7 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
     const timeUntilNextSave = Math.max(0, SAVE_THROTTLE_MS - (now - lastSaveTime));
     
     if (timeUntilNextSave > 0) {
+      console.log(`⏱️ Save throttled. Next save in ${Math.round(timeUntilNextSave/1000)}s`);
       // Clear any existing timeout
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -70,12 +72,16 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
       };
       
       // Schedule the actual save
-      saveTimeout = setTimeout(() => executeSave(dataToSave), timeUntilNextSave);
+      saveTimeout = setTimeout(() => {
+        console.log('⏰ Executing delayed save operation');
+        executeSave(dataToSave);
+      }, timeUntilNextSave);
       
       return pendingResponse;
     }
     
     // If we're outside the throttle window, save immediately
+    console.log('💾 Executing immediate save operation');
     return await executeSave(dataToSave);
   } catch (error) {
     console.error('Error saving game data:', error);
@@ -89,6 +95,7 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
 // Helper function to execute the actual save operation
 const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
   try {
+    console.log('📤 Sending save request to server...');
     const response = await fetch('/api/save-game-data', {
       method: 'POST',
       headers: {
@@ -106,6 +113,12 @@ const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
     // Update the last save time
     lastSaveTime = Date.now();
     pendingSaveData = null;
+    
+    console.log('✅ Save completed successfully', {
+      savedAt: result.savedAt,
+      throttled: result.url === 'throttled',
+      timestamp: new Date().toLocaleTimeString()
+    });
     
     return result;
   } catch (error) {
@@ -195,6 +208,7 @@ export const loadGameData = async (forceRefresh = false): Promise<LoadResponse> 
 // Force a save operation immediately, bypassing throttling
 export const forceSaveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promise<SaveResponse> => {
   try {
+    console.log('🔴 Force save operation initiated');
     const dataToSave: GameData = {
       ...gameData,
       lastSaved: new Date().toISOString()
@@ -216,6 +230,7 @@ export const forceSaveGameData = async (gameData: Omit<GameData, 'lastSaved'>): 
     }
     
     // Execute the save immediately
+    console.log('🚨 Executing forced save operation');
     return await executeSave(dataToSave);
   } catch (error) {
     console.error('Error force-saving game data:', error);

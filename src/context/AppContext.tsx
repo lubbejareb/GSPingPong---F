@@ -287,17 +287,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Function to save data manually
   const saveData = useCallback(async () => {
+    console.log('💾 Save data requested from AppContext');
     dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
     
       try {
+        console.log('📁 Saving data with:', {
+          players: state.players.length,
+          matches: state.matches.length
+        });
+        
         const result = await saveGameData({
           players: state.players,
           matches: state.matches
         });
       
       if (result.success && result.savedAt) {
+        console.log('✅ Save successful in AppContext', {
+          savedAt: result.savedAt,
+          isThrottled: result.url === 'throttled'
+        });
         dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
       } else {
+        console.error('❌ Save failed in AppContext', result);
         throw new Error(result.error || 'Failed to save data');
       }
     } catch (error) {
@@ -314,6 +325,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (lastMatch && lastMatch.status === 'completed') {
       // Only auto-save if we're not already saving and there's no error
       if (!state.isSaving && !state.error) {
+        console.log('🏆 Auto-saving after match completion');
         saveData();
       }
     }
@@ -324,6 +336,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       // Check if we have unsaved changes
       if (state.players.length > 0 || state.matches.length > 0) {
+        console.log('🔴 Force saving on app unmount');
         forceSaveGameData({
           players: state.players,
           matches: state.matches
