@@ -1,5 +1,6 @@
 import { Users, Swords, Play, Trophy } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StatusIndicator } from './StatusIndicator';
 
 interface NavigationProps {
   activeTab: string;
@@ -16,6 +17,10 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
 
   return (
     <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div></div>
+        <StatusIndicator />
+      </div>
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-lg rounded-xl p-1 h-auto">
           {tabs.map(({ id, label, icon: Icon }) => (

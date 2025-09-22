@@ -1,13 +1,18 @@
-import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
 import type { Player, Match, Bet } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateEloChange, updatePlayerStats, createPlayer } from '../utils/eloSystem';
+import { saveGameData, loadGameData, type GameData } from '../utils/apiService';
 
 interface AppState {
   players: Player[];
   matches: Match[];
   bets: Bet[];
   currentMatch: Match | null;
+  isLoading: boolean;
+  isSaving: boolean;
+  lastSaved: string | null;
+  error: string | null;
 }
 
 type AppAction =
@@ -18,13 +23,22 @@ type AppAction =
   | { type: 'COMPLETE_MATCH'; payload: { matchId: string; winnerId: string } }
   | { type: 'CANCEL_MATCH'; payload: { matchId: string } }
   | { type: 'PLACE_BET'; payload: { matchId: string; bettorId: string; predictedWinnerId: string; points: number } }
-  | { type: 'SET_CURRENT_MATCH'; payload: { match: Match | null } };
+  | { type: 'SET_CURRENT_MATCH'; payload: { match: Match | null } }
+  | { type: 'SET_LOADING'; payload: { isLoading: boolean } }
+  | { type: 'SET_SAVING'; payload: { isSaving: boolean } }
+  | { type: 'LOAD_DATA_SUCCESS'; payload: { data: GameData } }
+  | { type: 'SAVE_DATA_SUCCESS'; payload: { savedAt: string } }
+  | { type: 'SET_ERROR'; payload: { error: string | null } };
 
 const initialState: AppState = {
   players: [],
   matches: [],
   bets: [],
   currentMatch: null,
+  isLoading: false,
+  isSaving: false,
+  lastSaved: null,
+  error: null,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -256,6 +270,53 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'SET_LOADING': {
+      return {
+        ...state,
+        isLoading: action.payload.isLoading,
+        error: null,
+      };
+    }
+
+    case 'SET_SAVING': {
+      return {
+        ...state,
+        isSaving: action.payload.isSaving,
+        error: null,
+      };
+    }
+
+    case 'LOAD_DATA_SUCCESS': {
+      const { data } = action.payload;
+      return {
+        ...state,
+        players: data.players || [],
+        matches: data.matches || [],
+        bets: data.bets || [],
+        lastSaved: data.lastSaved || null,
+        isLoading: false,
+        error: null,
+      };
+    }
+
+    case 'SAVE_DATA_SUCCESS': {
+      return {
+        ...state,
+        lastSaved: action.payload.savedAt,
+        isSaving: false,
+        error: null,
+      };
+    }
+
+    case 'SET_ERROR': {
+      return {
+        ...state,
+        error: action.payload.error,
+        isLoading: false,
+        isSaving: false,
+      };
+    }
+
     default:
       return state;
   }
@@ -264,13 +325,99 @@ function appReducer(state: AppState, action: AppAction): AppState {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  saveData: () => Promise<void>;
 } | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Load data on app initialization
+  useEffect(() => {
+    const loadInitialData = async () => {
+      dispatch({ type: 'SET_LOADING', payload: { isLoading: true } });
+      
+      try {
+        const result = await loadGameData();
+        
+        if (result.success && result.data) {
+          // Convert date strings back to Date objects
+          const processedData = {
+            ...result.data,
+            players: result.data.players.map(player => ({
+              ...player,
+              createdAt: new Date(player.createdAt)
+            })),
+            matches: result.data.matches.map(match => ({
+              ...match,
+              startTime: match.startTime ? new Date(match.startTime) : undefined,
+              endTime: match.endTime ? new Date(match.endTime) : undefined,
+              player1: {
+                ...match.player1,
+                createdAt: new Date(match.player1.createdAt)
+              },
+              player2: {
+                ...match.player2,
+                createdAt: new Date(match.player2.createdAt)
+              }
+            })),
+            bets: result.data.bets.map(bet => ({
+              ...bet,
+              placedAt: new Date(bet.placedAt)
+            }))
+          };
+          
+          dispatch({ type: 'LOAD_DATA_SUCCESS', payload: { data: processedData } });
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
+        }
+      } catch (error) {
+        dispatch({ 
+          type: 'SET_ERROR', 
+          payload: { error: error instanceof Error ? error.message : 'Failed to load data' }
+        });
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Function to save data manually
+  const saveData = useCallback(async () => {
+    dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
+    
+    try {
+      const result = await saveGameData({
+        players: state.players,
+        matches: state.matches,
+        bets: state.bets
+      });
+      
+      if (result.success && result.savedAt) {
+        dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
+      } else {
+        throw new Error(result.error || 'Failed to save data');
+      }
+    } catch (error) {
+      dispatch({ 
+        type: 'SET_ERROR', 
+        payload: { error: error instanceof Error ? error.message : 'Failed to save data' }
+      });
+    }
+  }, [state.players, state.matches, state.bets]);
+
+  // Auto-save when matches are completed
+  useEffect(() => {
+    const lastMatch = state.matches[state.matches.length - 1];
+    if (lastMatch && lastMatch.status === 'completed') {
+      // Only auto-save if we're not already saving and there's no error
+      if (!state.isSaving && !state.error) {
+        saveData();
+      }
+    }
+  }, [state.matches, state.isSaving, state.error, saveData]);
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, saveData }}>
       {children}
     </AppContext.Provider>
   );
