@@ -24,9 +24,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await fetch(gameDataBlob.url);
     const gameData = await response.json();
     
+    // Ensure data structure compatibility - remove bets if they exist in old data
+    const cleanedData = {
+      players: gameData.players || [],
+      matches: gameData.matches || [],
+      lastSaved: gameData.lastSaved || new Date().toISOString()
+    };
+    
     return res.status(200).json({ 
       success: true, 
-      data: gameData,
+      data: cleanedData,
       lastModified: gameDataBlob.uploadedAt
     });
   } catch (error) {

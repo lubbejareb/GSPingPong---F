@@ -13,8 +13,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'No game data provided' });
     }
 
+    // Ensure data structure is clean and consistent
+    const cleanedData = {
+      players: gameData.players || [],
+      matches: gameData.matches || [],
+      lastSaved: gameData.lastSaved || new Date().toISOString()
+    };
+
     // Save the game data as JSON to Vercel Blob
-    const blob = await put('pingpong-game-data.json', JSON.stringify(gameData, null, 2), {
+    const blob = await put('pingpong-game-data.json', JSON.stringify(cleanedData, null, 2), {
       access: 'public',
       contentType: 'application/json',
       allowOverwrite: true,
