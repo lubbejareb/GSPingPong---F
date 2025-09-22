@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../hooks/useApp';
+import { forceSaveGameData } from '../utils/apiService';
+import { createPlayer } from '../utils/eloSystem';
 import type { Player } from '../types';
 import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff, ChevronDown, ChevronUp, Save, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +14,7 @@ const ADMIN_USERNAME = 'Admin';
 const ADMIN_PASSWORD = 'pingpong321';
 
 export function PlayerManagement() {
-  const { state, dispatch, saveData } = useApp();
+  const { state, dispatch } = useApp();
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
@@ -84,17 +86,49 @@ export function PlayerManagement() {
     setNewPlayerName('');
     setAddPlayerMessage('Player added successfully!');
     
-    // Save data after adding a player
-    saveData();
+    // Force save data immediately after adding a player - this bypasses throttling
+    dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
+    forceSaveGameData({
+      players: [...state.players, createPlayer(trimmedName, trimmedName)], // The reducer will add the real player
+      matches: state.matches
+    }).then(result => {
+      if (result.success && result.savedAt) {
+        dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
+        console.log('✅ Player added and data force-saved');
+      }
+    }).catch(error => {
+      console.error('Error saving after player addition:', error);
+    });
     
     // Clear success message after 3 seconds
     setTimeout(() => setAddPlayerMessage(''), 3000);
   };
 
   const handleDeletePlayer = (playerId: string) => {
+    // Get the updated players list without the deleted player
+    const updatedPlayers = state.players.filter(p => p.id !== playerId);
+    
     dispatch({ type: 'DELETE_PLAYER', payload: { playerId } });
-    // Save data after deleting a player
-    saveData();
+    
+    // Force save data immediately after deleting a player - this bypasses throttling
+    dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
+    forceSaveGameData({
+      players: updatedPlayers,
+      matches: state.matches.map(match => {
+        if ((match.player1.id === playerId || match.player2.id === playerId) && 
+            (match.status === 'pending' || match.status === 'in-progress')) {
+          return { ...match, status: 'cancelled' };
+        }
+        return match;
+      })
+    }).then(result => {
+      if (result.success && result.savedAt) {
+        dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
+        console.log('✅ Player deleted and data force-saved');
+      }
+    }).catch(error => {
+      console.error('Error saving after player deletion:', error);
+    });
   };
   
   // Format the last saved time
@@ -105,9 +139,23 @@ export function PlayerManagement() {
     return lastSaved.toLocaleTimeString();
   };
   
-  // Handle manual save
+  // Handle manual save - use forceSaveGameData to bypass throttling
   const handleManualSave = () => {
-    saveData();
+    dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
+    forceSaveGameData({
+      players: state.players,
+      matches: state.matches
+    }).then(result => {
+      if (result.success && result.savedAt) {
+        dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
+        console.log('✅ Manual save completed successfully');
+      }
+    }).catch(error => {
+      dispatch({ 
+        type: 'SET_ERROR', 
+        payload: { error: error instanceof Error ? error.message : 'Failed to save data' }
+      });
+    });
   };
 
   const sortedPlayers = [...state.players].sort((a, b) => b.elo - a.elo);
