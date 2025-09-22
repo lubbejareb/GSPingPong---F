@@ -1,12 +1,4 @@
 {
-  "functions": {
-    "api/save-game-data.ts": {
-      "runtime": "@vercel/node"
-    },
-    "api/load-game-data.ts": {
-      "runtime": "@vercel/node"
-    }
-  },
   "env": {
     "BLOB_READ_WRITE_TOKEN":"vercel_blob_rw_6M8h9Ze4FR0Tsaoo_DMyELiiTmVmWJatcySYBZTpcVqWKAw"    
   }
