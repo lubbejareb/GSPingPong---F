@@ -234,9 +234,10 @@ export function LiveMatch() {
               onClick={handleCancelMatch}
               variant="destructive"
               size="sm"
-              className="backdrop-blur-sm"
+              className="flex-1 bg-red-400 hover:bg-red-600 text-white shadow-lg transition-all"
             >
-              Cancel
+              <AlertTriangle className="h-4 w-4" />
+              Cancel Match
             </Button>
           </div>
         </div>

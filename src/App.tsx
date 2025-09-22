@@ -5,9 +5,12 @@ import { PlayerManagement } from './components/PlayerManagement';
 import { Matchmaking } from './components/Matchmaking';
 import { LiveMatch } from './components/LiveMatch';
 import { Leaderboard } from './components/Leaderboard';
+import { DebugMenu } from './components/DebugMenu';
+import { isDevelopment } from './utils/apiService';
 
 function App() {
   const [activeTab, setActiveTab] = useState('players');
+  const [debugMenuVisible, setDebugMenuVisible] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -51,6 +54,14 @@ function App() {
             </div>
           </div>
         </div>
+        
+        {/* Debug Menu - Only in development */}
+        {isDevelopment && (
+          <DebugMenu 
+            isVisible={debugMenuVisible} 
+            onToggle={() => setDebugMenuVisible(!debugMenuVisible)} 
+          />
+        )}
       </div>
     </AppProvider>
   );
