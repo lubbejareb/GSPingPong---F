@@ -1,4 +1,3 @@
-import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Loader2, CheckCircle, AlertCircle, CloudDownload, CloudUpload } from 'lucide-react';
 import { Badge } from './ui/badge';
