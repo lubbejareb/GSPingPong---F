@@ -317,23 +317,27 @@ function PlayerCard({ player, rank, onDelete, isAuthenticated }: {
                 <Trash2 size={18} />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogContent className="max-w-md">
               <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <Trash2 className="text-red-600" size={16} />
+                <AlertDialogTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <Trash2 className="text-red-600" size={20} />
                   </div>
                   Delete Player
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-base">
-                  Are you sure you want to delete <span className="font-semibold">{player.name}</span>? This action cannot be undone and will remove all their match history.
+                <AlertDialogDescription className="text-gray-600 leading-relaxed">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-gray-900">{player.name}</span>?{" "}
+                  This action cannot be undone and will permanently remove all their match history and statistics.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="border-slate-200">Cancel</AlertDialogCancel>
+              <AlertDialogFooter className="gap-3">
+                <AlertDialogCancel>
+                  Cancel
+                </AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={onDelete} 
-                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   Delete Player
                 </AlertDialogAction>
