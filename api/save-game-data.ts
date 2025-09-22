@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const blob = await put('pingpong-game-data.json', JSON.stringify(gameData, null, 2), {
       access: 'public',
       contentType: 'application/json',
+      allowOverwrite: true,
     });
 
     return res.status(200).json({ 
