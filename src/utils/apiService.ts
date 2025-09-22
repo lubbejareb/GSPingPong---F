@@ -6,6 +6,12 @@ export interface GameData {
   lastSaved: string;
 }
 
+// Rate limiting configuration
+const SAVE_THROTTLE_MS = 60000; // 1 minute between saves
+let lastSaveTime = 0;
+let pendingSaveData: GameData | null = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export interface SaveResponse {
   success: boolean;
   url?: string;
@@ -42,6 +48,47 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
       };
     }
 
+    // Store the latest data to be saved
+    pendingSaveData = dataToSave;
+    
+    // If we're within the throttle window, schedule a save for later
+    const now = Date.now();
+    const timeUntilNextSave = Math.max(0, SAVE_THROTTLE_MS - (now - lastSaveTime));
+    
+    if (timeUntilNextSave > 0) {
+      // Clear any existing timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      // Return early with a success response but indicate it's pending
+      const pendingResponse: SaveResponse = {
+        success: true,
+        savedAt: dataToSave.lastSaved,
+        // Add a note that this is throttled (won't be visible to user)
+        url: 'throttled'
+      };
+      
+      // Schedule the actual save
+      saveTimeout = setTimeout(() => executeSave(dataToSave), timeUntilNextSave);
+      
+      return pendingResponse;
+    }
+    
+    // If we're outside the throttle window, save immediately
+    return await executeSave(dataToSave);
+  } catch (error) {
+    console.error('Error saving game data:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Helper function to execute the actual save operation
+const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
+  try {
     const response = await fetch('/api/save-game-data', {
       method: 'POST',
       headers: {
@@ -56,9 +103,13 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
       throw new Error(result.error || 'Failed to save game data');
     }
 
+    // Update the last save time
+    lastSaveTime = Date.now();
+    pendingSaveData = null;
+    
     return result;
   } catch (error) {
-    console.error('Error saving game data:', error);
+    console.error('Error executing save:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -66,8 +117,28 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
   }
 };
 
-export const loadGameData = async (): Promise<LoadResponse> => {
+// Cache the loaded data to reduce API calls
+let cachedGameData: LoadResponse | null = null;
+let lastLoadTime = 0;
+const LOAD_CACHE_MS = 30000; // 30 seconds cache
+
+export const loadGameData = async (forceRefresh = false): Promise<LoadResponse> => {
   try {
+    // Check if we have pending save data that hasn't been persisted yet
+    if (pendingSaveData && !forceRefresh) {
+      return {
+        success: true,
+        data: pendingSaveData,
+        message: 'Data loaded from pending save'
+      };
+    }
+    
+    // Check if we have cached data that's still fresh
+    const now = Date.now();
+    if (cachedGameData && !forceRefresh && (now - lastLoadTime < LOAD_CACHE_MS)) {
+      return cachedGameData;
+    }
+    
     // Use localStorage in development mode
     if (isDevelopment) {
       const savedData = localStorage.getItem(STORAGE_KEY);
@@ -105,6 +176,10 @@ export const loadGameData = async (): Promise<LoadResponse> => {
     if (!response.ok) {
       throw new Error(result.error || 'Failed to load game data');
     }
+    
+    // Cache the result
+    cachedGameData = result;
+    lastLoadTime = now;
 
     return result;
   } catch (error) {
@@ -112,6 +187,40 @@ export const loadGameData = async (): Promise<LoadResponse> => {
     return {
       success: false,
       data: null,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Force a save operation immediately, bypassing throttling
+export const forceSaveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promise<SaveResponse> => {
+  try {
+    const dataToSave: GameData = {
+      ...gameData,
+      lastSaved: new Date().toISOString()
+    };
+    
+    if (isDevelopment) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      console.log('Game data force-saved to localStorage (development mode)');
+      return {
+        success: true,
+        savedAt: dataToSave.lastSaved
+      };
+    }
+    
+    // Clear any pending save
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    
+    // Execute the save immediately
+    return await executeSave(dataToSave);
+  } catch (error) {
+    console.error('Error force-saving game data:', error);
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }

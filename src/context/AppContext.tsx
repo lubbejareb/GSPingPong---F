@@ -2,7 +2,7 @@ import React, { createContext, useReducer, useEffect, useCallback, type ReactNod
 import type { Player, Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateEloChange, updatePlayerStats, createPlayer } from '../utils/eloSystem';
-import { saveGameData, loadGameData, type GameData } from '../utils/apiService';
+import { saveGameData, loadGameData, forceSaveGameData, type GameData } from '../utils/apiService';
 
 interface AppState {
   players: Player[];
@@ -318,6 +318,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [state.matches, state.isSaving, state.error, saveData]);
+  
+  // Force save on component unmount to ensure data is persisted
+  useEffect(() => {
+    return () => {
+      // Check if we have unsaved changes
+      if (state.players.length > 0 || state.matches.length > 0) {
+        forceSaveGameData({
+          players: state.players,
+          matches: state.matches
+        }).catch(error => console.error('Error during force save on unmount:', error));
+      }
+    };
+  }, [state.players, state.matches]);
 
   return (
     <AppContext.Provider value={{ state, dispatch, saveData }}>

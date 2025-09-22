@@ -1,12 +1,39 @@
 import { list } from '@vercel/blob';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Server-side caching
+interface GameDataCache {
+  players: Record<string, unknown>[];
+  matches: Record<string, unknown>[];
+  lastSaved: string;
+}
+
+let cachedGameData: GameDataCache | null = null;
+let cachedLastModified: string | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 60000; // 1 minute cache TTL
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Check for force refresh parameter
+  const forceRefresh = req.query.forceRefresh === 'true';
+
   try {
+    const now = Date.now();
+    
+    // Return cached data if it's still valid and no force refresh requested
+    if (!forceRefresh && cachedGameData && cachedLastModified && (now - lastCacheTime < CACHE_TTL_MS)) {
+      return res.status(200).json({
+        success: true,
+        data: cachedGameData,
+        lastModified: cachedLastModified,
+        fromCache: true
+      });
+    }
+    
     // List blobs to find the latest game data file
     const { blobs } = await list();
     const gameDataBlob = blobs.find(blob => blob.pathname === 'pingpong-game-data.json');
@@ -30,6 +57,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       matches: gameData.matches || [],
       lastSaved: gameData.lastSaved || new Date().toISOString()
     };
+    
+    // Update cache
+    cachedGameData = cleanedData;
+    cachedLastModified = gameDataBlob.uploadedAt.toString(); // Convert to string
+    lastCacheTime = Date.now(); // Use Date.now() instead of the variable
     
     return res.status(200).json({ 
       success: true, 
