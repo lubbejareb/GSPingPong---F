@@ -1,4 +1,4 @@
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Trophy, TrendingUp, Medal, Award } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -120,105 +120,6 @@ export function Leaderboard() {
         </CardContent>
       </Card>
 
-      {/* Betting Leaderboard */}
-      {state.players.some(p => p.betsPlaced > 0) && (
-        <Card className="border-0 shadow-none bg-transparent">
-          <CardHeader className="pb-6">
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-2 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl">
-                <TrendingUp className="text-white" size={24} />
-              </div>
-              Betting Leaderboard
-            </CardTitle>
-            <CardDescription className="text-base">
-              Top performers in the betting arena - points earned and success rates
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              {[...state.players]
-                .filter(p => p.betsPlaced > 0)
-                .sort((a, b) => b.totalPointsEarned - a.totalPointsEarned)
-                .map((player, index) => {
-                  const rank = index + 1;
-                  const bettingWinRate = player.betsPlaced > 0 ? (player.betsWon / player.betsPlaced * 100) : 0;
-                  
-                  return (
-                    <Card 
-                      key={`betting-${player.id}`} 
-                      className={`hover:shadow-lg hover:shadow-slate-200/60 transition-all duration-200 border border-slate-200/60 bg-white/80 backdrop-blur-sm group ${rank <= 3 ? 'ring-2 ring-green-200/50' : ''}`}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-6">
-                            <div className="relative">
-                              {rank <= 3 ? (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 text-white font-bold flex items-center justify-center text-lg">
-                                  #{rank}
-                                </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center text-lg">
-                                  #{rank}
-                                </div>
-                              )}
-                              {rank <= 3 && (
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xs">💰</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <h3 className="font-semibold text-xl text-slate-800">{player.name}</h3>
-                              <div className="flex flex-wrap gap-4 text-sm">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-500">Points Earned:</span>
-                                  <Badge variant="outline" className="font-semibold text-green-600 border-green-200 bg-green-50 text-base">
-                                    {player.totalPointsEarned}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-500">Bets:</span>
-                                  <span className="font-medium text-slate-700">{player.betsPlaced}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-500">W/L:</span>
-                                  <span className="font-medium text-slate-700">{player.betsWon}/{player.betsPlaced - player.betsWon}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-500">Pool:</span>
-                                  <Badge variant="outline" className={`text-xs ${
-                                    player.bettingPool < 100 ? 'bg-red-50 text-red-600 border-red-200' : 
-                                    player.bettingPool < 1000 ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 
-                                    'bg-blue-50 text-blue-600 border-blue-200'
-                                  }`}>
-                                    {player.bettingPool}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-lg font-bold py-2 px-4 ${
-                                bettingWinRate >= 70 ? 'bg-green-100 text-green-700' : 
-                                bettingWinRate >= 50 ? 'bg-yellow-100 text-yellow-700' : 
-                                'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              {bettingWinRate.toFixed(1)}%
-                            </Badge>
-                            <div className="text-sm text-slate-500 mt-2">Betting Success</div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Recent Matches */}
       {recentMatches.length > 0 && (

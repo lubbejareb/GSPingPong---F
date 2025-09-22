@@ -1,9 +1,8 @@
-import type { Player, Match, Bet } from '../types';
+import type { Player, Match } from '../types';
 
 export interface GameData {
   players: Player[];
   matches: Match[];
-  bets: Bet[];
   lastSaved: string;
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Swords, Play, Users, TrendingUp } from 'lucide-react';
 import { getWinProbability } from '../utils/eloSystem';
 import { Button } from '@/components/ui/button';

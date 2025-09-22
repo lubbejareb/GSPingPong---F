@@ -54,8 +54,6 @@ export function getWinProbability(player1Elo: number, player2Elo: number): numbe
  * Create a new player with default ELO
  */
 export function createPlayer(name: string, id: string): Player {
-  const STARTING_BETTING_POOL = 2500;
-  
   return {
     id,
     name,
@@ -64,10 +62,6 @@ export function createPlayer(name: string, id: string): Player {
     losses: 0,
     totalGames: 0,
     createdAt: new Date(),
-    betsPlaced: 0,
-    betsWon: 0,
-    totalPointsEarned: 0,
-    bettingPool: STARTING_BETTING_POOL,
   };
 }
 

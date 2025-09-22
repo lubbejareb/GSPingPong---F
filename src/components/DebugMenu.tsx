@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
+import type { Match } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { clearLocalStorageData, getLocalStorageData, isDevelopment } from '../utils/apiService';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { GameResultDialog } from './GameResultDialog';
 
 interface DebugMenuProps {
@@ -16,7 +17,7 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
   const { state } = useApp();
   const [localData, setLocalData] = useState(getLocalStorageData());
   const [showTestDialog, setShowTestDialog] = useState(false);
-  const [testMatch, setTestMatch] = useState<any>(null);
+  const [testMatch, setTestMatch] = useState<Match | null>(null);
 
   if (!isDevelopment) {
     return null;
@@ -44,7 +45,7 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
         id: "test-match-id",
         player1,
         player2,
-        status: 'completed',
+        status: 'completed' as const,
         winner: player1,
         loser: player2,
         startTime: new Date(Date.now() - 300000), // 5 minutes ago
@@ -91,7 +92,7 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
         id: "test-match-id",
         player1,
         player2,
-        status: 'completed',
+        status: 'completed' as const,
         winner: player1,
         loser: player2,
         startTime: new Date(Date.now() - 300000), // 5 minutes ago
@@ -185,7 +186,6 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
             <div className="text-yellow-700 space-y-0.5">
               <div>Players: {state.players.length}</div>
               <div>Matches: {state.matches.length}</div>
-              <div>Bets: {state.bets.length}</div>
               {state.lastSaved && (
                 <div>Last saved: {formatDate(state.lastSaved)}</div>
               )}
@@ -211,7 +211,6 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
                   <div>✓ Data found</div>
                   <div>Players: {localData.players?.length || 0}</div>
                   <div>Matches: {localData.matches?.length || 0}</div>
-                  <div>Bets: {localData.bets?.length || 0}</div>
                   {localData.lastSaved && (
                     <div>Saved: {formatDate(localData.lastSaved)}</div>
                   )}

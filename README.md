@@ -93,15 +93,9 @@ npm run build
 - The match becomes active and appears in the "Live Match" tab
 - Timer starts automatically
 
-### 4. Place Bets
-- During an active match, go to "Live Match"
-- Enter your name, bet amount, and predicted winner
-- View all active bets in real-time
-
-### 5. Complete Matches
+### 4. Complete Matches
 - Click the winner's button to complete the match
 - ELO ratings are automatically updated
-- Bets are resolved (won/lost)
 - Match appears in match history
 
 ### 6. View Rankings
@@ -136,7 +130,7 @@ Each player tracks:
 
 ### Match System
 - **Pending**: Match created but not started
-- **In-Progress**: Active match with live betting
+- **In-Progress**: Active match
 - **Completed**: Finished match with results
 - **Cancelled**: Cancelled matches (no ELO changes)
 

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Player, Match, Bet } from '../types';
+import React, { createContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
+import type { Player, Match } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateEloChange, updatePlayerStats, createPlayer } from '../utils/eloSystem';
 import { saveGameData, loadGameData, type GameData } from '../utils/apiService';
@@ -7,7 +7,6 @@ import { saveGameData, loadGameData, type GameData } from '../utils/apiService';
 interface AppState {
   players: Player[];
   matches: Match[];
-  bets: Bet[];
   currentMatch: Match | null;
   isLoading: boolean;
   isSaving: boolean;
@@ -22,7 +21,6 @@ type AppAction =
   | { type: 'START_MATCH'; payload: { matchId: string } }
   | { type: 'COMPLETE_MATCH'; payload: { matchId: string; winnerId: string } }
   | { type: 'CANCEL_MATCH'; payload: { matchId: string } }
-  | { type: 'PLACE_BET'; payload: { matchId: string; bettorId: string; predictedWinnerId: string; points: number } }
   | { type: 'SET_CURRENT_MATCH'; payload: { match: Match | null } }
   | { type: 'SET_LOADING'; payload: { isLoading: boolean } }
   | { type: 'SET_SAVING'; payload: { isSaving: boolean } }
@@ -33,7 +31,6 @@ type AppAction =
 const initialState: AppState = {
   players: [],
   matches: [],
-  bets: [],
   currentMatch: null,
   isLoading: false,
   isSaving: false,
@@ -75,16 +72,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return match;
       });
 
-      // Cancel all active bets related to matches involving this player
-      const updatedBets = state.bets.map(bet => {
-        const relatedMatch = updatedMatches.find(m => m.id === bet.matchId);
-        if (relatedMatch && 
-            (relatedMatch.player1.id === playerId || relatedMatch.player2.id === playerId) && 
-            bet.status === 'active') {
-          return { ...bet, status: 'cancelled' as const };
-        }
-        return bet;
-      });
 
       // Clear current match if it involves the deleted player
       const newCurrentMatch = state.currentMatch && 
@@ -96,7 +83,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         players: state.players.filter(p => p.id !== playerId),
         matches: updatedMatches,
-        bets: updatedBets,
         currentMatch: newCurrentMatch,
       };
     }
@@ -161,50 +147,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         },
       };
 
-      // Update bets and calculate winnings
-      const updatedBets = state.bets.map(bet => {
-        if (bet.matchId === action.payload.matchId) {
-          const won = bet.predictedWinnerId === action.payload.winnerId;
-          // For winning bets, return original bet + winnings (total payout)
-          const pointsEarned = won ? Math.round(bet.points * bet.odds) : 0;
-          return {
-            ...bet,
-            status: won ? 'won' as const : 'lost' as const,
-            pointsEarned,
-          };
-        }
-        return bet;
-      });
-
-      // Update betting stats for all bettors
-      const playersWithUpdatedBetting = state.players.map(player => {
-        // Start with the base player (or updated match player if applicable)
-        let basePlayer = player;
-        if (player.id === match.player1.id) basePlayer = updatedPlayer1;
-        if (player.id === match.player2.id) basePlayer = updatedPlayer2;
-        
-        // Update betting stats for bettors
-        const playerBets = updatedBets.filter(bet => bet.bettorId === player.id && bet.matchId === action.payload.matchId);
-        if (playerBets.length > 0) {
-          const newWins = playerBets.filter(bet => bet.status === 'won').length;
-          const newPoints = playerBets.reduce((total, bet) => total + (bet.pointsEarned || 0), 0);
-          
-          return {
-            ...basePlayer,
-            betsWon: basePlayer.betsWon + newWins,
-            totalPointsEarned: basePlayer.totalPointsEarned + newPoints,
-            bettingPool: basePlayer.bettingPool + newPoints, // Add winnings back to betting pool
-          };
-        }
-        
-        return basePlayer;
+      const playersWithUpdatedStats = state.players.map(player => {
+        if (player.id === match.player1.id) return updatedPlayer1;
+        if (player.id === match.player2.id) return updatedPlayer2;
+        return player;
       });
 
       return {
         ...state,
-        players: playersWithUpdatedBetting,
+        players: playersWithUpdatedStats,
         matches: state.matches.map(m => m.id === action.payload.matchId ? completedMatch : m),
-        bets: updatedBets,
         currentMatch: state.currentMatch?.id === action.payload.matchId ? null : state.currentMatch,
       };
     }
@@ -219,49 +171,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case 'PLACE_BET': {
-      const match = state.matches.find(m => m.id === action.payload.matchId);
-      if (!match || match.status !== 'in-progress') return state;
-
-      // Find the bettor player
-      const bettorPlayer = state.players.find(p => p.id === action.payload.bettorId);
-      if (!bettorPlayer) return state;
-
-      // Validate betting constraints
-      const MAX_BET = 100;
-      const betAmount = action.payload.points;
-      
-      if (betAmount > MAX_BET) return state; // Exceeds max bet limit
-      if (betAmount > bettorPlayer.bettingPool) return state; // Insufficient funds
-
-      // Calculate simple odds based on ELO difference (simplified)
-      const eloDiff = Math.abs(match.player1.elo - match.player2.elo);
-      const baseOdds = 1.5 + (eloDiff / 400); // Simple odds calculation
-
-      const newBet: Bet = {
-        id: uuidv4(),
-        matchId: action.payload.matchId,
-        bettorId: action.payload.bettorId,
-        predictedWinnerId: action.payload.predictedWinnerId,
-        points: betAmount,
-        odds: baseOdds,
-        status: 'active',
-        placedAt: new Date(),
-      };
-
-      // Update bettor's betting stats and deduct bet amount from pool
-      const updatedBettor = {
-        ...bettorPlayer,
-        betsPlaced: bettorPlayer.betsPlaced + 1,
-        bettingPool: bettorPlayer.bettingPool - betAmount,
-      };
-
-      return {
-        ...state,
-        players: state.players.map(p => p.id === action.payload.bettorId ? updatedBettor : p),
-        bets: [...state.bets, newBet],
-      };
-    }
 
     case 'SET_CURRENT_MATCH': {
       return {
@@ -292,7 +201,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         players: data.players || [],
         matches: data.matches || [],
-        bets: data.bets || [],
         lastSaved: data.lastSaved || null,
         isLoading: false,
         error: null,
@@ -359,10 +267,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 ...match.player2,
                 createdAt: new Date(match.player2.createdAt)
               }
-            })),
-            bets: result.data.bets.map(bet => ({
-              ...bet,
-              placedAt: new Date(bet.placedAt)
             }))
           };
           
@@ -385,12 +289,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const saveData = useCallback(async () => {
     dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
     
-    try {
-      const result = await saveGameData({
-        players: state.players,
-        matches: state.matches,
-        bets: state.bets
-      });
+      try {
+        const result = await saveGameData({
+          players: state.players,
+          matches: state.matches
+        });
       
       if (result.success && result.savedAt) {
         dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
@@ -403,7 +306,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         payload: { error: error instanceof Error ? error.message : 'Failed to save data' }
       });
     }
-  }, [state.players, state.matches, state.bets]);
+  }, [state.players, state.matches]);
 
   // Auto-save when matches are completed
   useEffect(() => {
@@ -423,10 +326,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
-}
+export { AppContext };

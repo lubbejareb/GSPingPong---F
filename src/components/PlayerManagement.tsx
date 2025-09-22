@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import type { Player } from '../types';
 import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
