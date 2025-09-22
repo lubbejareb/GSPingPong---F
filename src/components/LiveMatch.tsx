@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Trophy, Coins, Clock, Users, Target, Timer, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Coins, Clock, Users, Target, Timer, AlertTriangle, Flag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { GameResultDialog } from './GameResultDialog';
+import { WinnerSelectionDialog } from './WinnerSelectionDialog';
+import type { Match } from '../types';
+import { Button } from '@/components/ui/button';
 
 export function LiveMatch() {
   const { state, dispatch } = useApp();
@@ -14,6 +17,9 @@ export function LiveMatch() {
   const [selectedWinner, setSelectedWinner] = useState<string>('');
   const [bettingTimeLeft, setBettingTimeLeft] = useState<number>(0);
   const [betError, setBetError] = useState('');
+  const [showGameResult, setShowGameResult] = useState(false);
+  const [showWinnerSelection, setShowWinnerSelection] = useState(false);
+  const [completedMatch, setCompletedMatch] = useState<Match | null>(null);
   
   const BETTING_WINDOW_SECONDS = 30; // 30 seconds
 
@@ -46,12 +52,78 @@ export function LiveMatch() {
 
   const handleCompleteMatch = (winnerId: string) => {
     if (currentMatch) {
+      // Store match data before completing it
+      const matchId = currentMatch.id;
+      const matchCopy = {...currentMatch};
+      
+      // Complete the match
       dispatch({
         type: 'COMPLETE_MATCH',
-        payload: { matchId: currentMatch.id, winnerId }
+        payload: { matchId, winnerId }
       });
+      
+      // Find the completed match after state update
+      setTimeout(() => {
+        // Look for the match in the updated state
+        const completedMatchInState = state.matches.find(m => 
+          m.id === matchId && m.status === 'completed'
+        );
+        
+        if (completedMatchInState) {
+          setCompletedMatch(completedMatchInState);
+          setShowGameResult(true);
+        } else {
+          // If we can't find it, manually construct a completed match
+          const player1 = state.players.find(p => p.id === matchCopy.player1.id) || matchCopy.player1;
+          const player2 = state.players.find(p => p.id === matchCopy.player2.id) || matchCopy.player2;
+          
+          // Determine winner and loser
+          const winner = winnerId === player1.id ? player1 : player2;
+          const loser = winnerId === player1.id ? player2 : player1;
+          
+          // Calculate ELO changes (approximation)
+          const player1IsWinner = winnerId === player1.id;
+          const eloChange = Math.abs(player1.elo - matchCopy.player1.elo);
+          
+          const syntheticMatch = {
+            ...matchCopy,
+            status: 'completed' as const,
+            player1,
+            player2,
+            winner,
+            loser,
+            endTime: new Date(),
+            eloChanges: {
+              player1Change: player1IsWinner ? eloChange : -eloChange,
+              player2Change: player1IsWinner ? -eloChange : eloChange
+            }
+          };
+          
+          setCompletedMatch(syntheticMatch);
+          setShowGameResult(true);
+        }
+      }, 200);
     }
   };
+  
+  // Effect to find the completed match in state after it's updated
+  useEffect(() => {
+    // Only look for completed matches if we don't already have one showing
+    if (!showGameResult && completedMatch === null) {
+      // Look for the most recently completed match
+      const lastCompletedMatch = [...state.matches]
+        .reverse()
+        .find(m => m.status === 'completed' && m.endTime);
+        
+      // Show the result if the match was completed recently (within 5 seconds)
+      if (lastCompletedMatch && 
+          lastCompletedMatch.endTime && 
+          (Date.now() - lastCompletedMatch.endTime.getTime() < 5000)) {
+        setCompletedMatch(lastCompletedMatch);
+        setShowGameResult(true);
+      }
+    }
+  }, [state.matches, showGameResult, completedMatch]);
 
   const handleCancelMatch = () => {
     if (currentMatch && confirm('Are you sure you want to cancel this match?')) {
@@ -59,6 +131,38 @@ export function LiveMatch() {
         type: 'CANCEL_MATCH',
         payload: { matchId: currentMatch.id }
       });
+    }
+  };
+  
+  const handleRematch = () => {
+    if (completedMatch) {
+      // Create a new match with the same players
+      dispatch({
+        type: 'CREATE_MATCH',
+        payload: { 
+          player1Id: completedMatch.player1.id, 
+          player2Id: completedMatch.player2.id 
+        }
+      });
+      
+      // Close the dialog
+      setShowGameResult(false);
+      setCompletedMatch(null);
+      
+      // Start the match immediately
+      const newMatch = state.matches[state.matches.length - 1];
+      if (newMatch) {
+        dispatch({
+          type: 'START_MATCH',
+          payload: { matchId: newMatch.id }
+        });
+      }
+    }
+  };
+  
+  const handleGameFinished = () => {
+    if (currentMatch) {
+      setShowWinnerSelection(true);
     }
   };
 
@@ -160,6 +264,25 @@ export function LiveMatch() {
 
   return (
     <div className="space-y-6">
+      {/* Winner Selection Dialog */}
+      <WinnerSelectionDialog
+        isOpen={showWinnerSelection}
+        onClose={() => setShowWinnerSelection(false)}
+        match={currentMatch}
+        onSelectWinner={handleCompleteMatch}
+      />
+      
+      {/* Game Result Dialog */}
+      <GameResultDialog 
+        isOpen={showGameResult}
+        onClose={() => {
+          setShowGameResult(false);
+          setCompletedMatch(null);
+        }}
+        match={completedMatch}
+        onRematch={handleRematch}
+      />
+      
       {/* Live Match Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -213,30 +336,17 @@ export function LiveMatch() {
 
           <div className="flex gap-3">
             <Button
-              onClick={() => handleCompleteMatch(currentMatch.player1.id)}
-              variant="secondary"
-              size="sm"
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
+              onClick={handleGameFinished}
+              className="flex-1 bg-white hover:bg-blue-50 text-blue-700 font-medium border-2 border-white shadow-lg shadow-blue-900/20 py-5 transition-all"
             >
-              <Trophy className="mr-1 h-4 w-4" />
-              {currentMatch.player1.name} Wins
-            </Button>
-            <Button
-              onClick={() => handleCompleteMatch(currentMatch.player2.id)}
-              variant="secondary"
-              size="sm"
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
-            >
-              <Trophy className="mr-1 h-4 w-4" />
-              {currentMatch.player2.name} Wins
+              <Flag className="mr-2 h-5 w-5 text-blue-600" />
+              Game Finished
             </Button>
             <Button
               onClick={handleCancelMatch}
-              variant="destructive"
-              size="sm"
-              className="flex-1 bg-red-400 hover:bg-red-600 text-white shadow-lg transition-all"
+              className="flex-1 bg-red-400 hover:bg-red-600 text-white shadow-lg transition-all py-5"
             >
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="mr-2 h-5 w-5" />
               Cancel Match
             </Button>
           </div>
@@ -343,7 +453,6 @@ export function LiveMatch() {
               )}
               <Button 
                 type="submit" 
-                size="lg"
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg text-white"
                 disabled={!isBettingOpen}
               >

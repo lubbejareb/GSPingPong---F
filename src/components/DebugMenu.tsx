@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { clearLocalStorageData, getLocalStorageData, isDevelopment } from '../utils/apiService';
 import { useApp } from '../context/AppContext';
+import { GameResultDialog } from './GameResultDialog';
 
 interface DebugMenuProps {
   isVisible: boolean;
@@ -14,6 +15,8 @@ interface DebugMenuProps {
 export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
   const { state } = useApp();
   const [localData, setLocalData] = useState(getLocalStorageData());
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testMatch, setTestMatch] = useState<any>(null);
 
   if (!isDevelopment) {
     return null;
@@ -28,6 +31,80 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
 
   const refreshLocalData = () => {
     setLocalData(getLocalStorageData());
+  };
+  
+  const openTestGameResultDialog = () => {
+    // Create a test match with sample data
+    if (state.players.length >= 2) {
+      // Use existing players if available
+      const player1 = state.players[0];
+      const player2 = state.players[1];
+      
+      const testMatchData = {
+        id: "test-match-id",
+        player1,
+        player2,
+        status: 'completed',
+        winner: player1,
+        loser: player2,
+        startTime: new Date(Date.now() - 300000), // 5 minutes ago
+        endTime: new Date(),
+        eloChanges: {
+          player1Change: 15,
+          player2Change: -15
+        }
+      };
+      
+      setTestMatch(testMatchData);
+      setShowTestDialog(true);
+    } else {
+      // Create fake players if no players exist
+      const player1 = {
+        id: "test-player-1",
+        name: "Test Player 1",
+        elo: 1200,
+        wins: 5,
+        losses: 2,
+        totalGames: 7,
+        createdAt: new Date(),
+        betsPlaced: 0,
+        betsWon: 0,
+        totalPointsEarned: 0,
+        bettingPool: 100
+      };
+      
+      const player2 = {
+        id: "test-player-2",
+        name: "Test Player 2",
+        elo: 1150,
+        wins: 2,
+        losses: 5,
+        totalGames: 7,
+        createdAt: new Date(),
+        betsPlaced: 0,
+        betsWon: 0,
+        totalPointsEarned: 0,
+        bettingPool: 100
+      };
+      
+      const testMatchData = {
+        id: "test-match-id",
+        player1,
+        player2,
+        status: 'completed',
+        winner: player1,
+        loser: player2,
+        startTime: new Date(Date.now() - 300000), // 5 minutes ago
+        endTime: new Date(),
+        eloChanges: {
+          player1Change: 15,
+          player2Change: -15
+        }
+      };
+      
+      setTestMatch(testMatchData);
+      setShowTestDialog(true);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -55,6 +132,17 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
 
   return (
     <div className="fixed bottom-4 left-4 z-50 w-80">
+      {/* Test Game Result Dialog */}
+      <GameResultDialog 
+        isOpen={showTestDialog}
+        onClose={() => setShowTestDialog(false)}
+        match={testMatch}
+        onRematch={() => {
+          alert("Rematch requested in test mode");
+          setShowTestDialog(false);
+        }}
+      />
+      
       <Card className="border-yellow-400 bg-yellow-50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -171,6 +259,15 @@ export function DebugMenu({ isVisible, onToggle }: DebugMenuProps) {
               className="w-full h-7 text-xs"
             >
               Refresh Page
+            </Button>
+            
+            <Button 
+              onClick={openTestGameResultDialog}
+              variant="outline" 
+              size="sm" 
+              className="w-full h-7 text-xs bg-blue-100 hover:bg-blue-200 border-blue-300 text-blue-800"
+            >
+              Test Game Result Dialog
             </Button>
           </div>
 
