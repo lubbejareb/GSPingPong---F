@@ -161,7 +161,7 @@ export function LiveMatch() {
   return (
     <div className="space-y-6">
       {/* Live Match Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-teal-500 to-blue-600 text-white rounded-2xl p-6 shadow-xl">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
@@ -197,14 +197,14 @@ export function LiveMatch() {
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
               <div className="text-xl font-bold mb-1">{currentMatch.player1.name}</div>
-              <div className="text-emerald-100 mb-3">ELO: {currentMatch.player1.elo}</div>
+              <div className="text-blue-100 mb-3">ELO: {currentMatch.player1.elo}</div>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-sm py-0.5 px-3">
                 {totalBetsPlayer1} betting points
               </Badge>
             </div>
             <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
               <div className="text-xl font-bold mb-1">{currentMatch.player2.name}</div>
-              <div className="text-emerald-100 mb-3">ELO: {currentMatch.player2.elo}</div>
+              <div className="text-blue-100 mb-3">ELO: {currentMatch.player2.elo}</div>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-sm py-0.5 px-3">
                 {totalBetsPlayer2} betting points
               </Badge>
@@ -214,18 +214,18 @@ export function LiveMatch() {
           <div className="flex gap-3">
             <Button
               onClick={() => handleCompleteMatch(currentMatch.player1.id)}
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className="flex-1 bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
             >
               <Trophy className="mr-1 h-4 w-4" />
               {currentMatch.player1.name} Wins
             </Button>
             <Button
               onClick={() => handleCompleteMatch(currentMatch.player2.id)}
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className="flex-1 bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm transition-all"
             >
               <Trophy className="mr-1 h-4 w-4" />
               {currentMatch.player2.name} Wins
@@ -234,7 +234,7 @@ export function LiveMatch() {
               onClick={handleCancelMatch}
               variant="destructive"
               size="sm"
-              className="bg-red-500/80 hover:bg-red-600/80 backdrop-blur-sm"
+              className="backdrop-blur-sm"
             >
               Cancel
             </Button>
@@ -248,7 +248,7 @@ export function LiveMatch() {
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3 text-2xl">
               <div className={`p-2 rounded-xl ${isBettingOpen 
-                ? 'bg-gradient-to-br from-green-400 to-emerald-500' 
+                ? 'bg-gradient-to-br from-blue-400 to-indigo-500' 
                 : 'bg-gradient-to-br from-gray-400 to-gray-500'}`}>
                 <Coins className="text-white" size={24} />
               </div>
@@ -277,7 +277,7 @@ export function LiveMatch() {
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-slate-700">Select Player</label>
                   <Select value={selectedBettor} onValueChange={setSelectedBettor} required disabled={!isBettingOpen}>
-                    <SelectTrigger className="bg-white border-slate-200 focus:border-green-500 focus:ring-green-500/20">
+                    <SelectTrigger className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
                       <SelectValue placeholder="Choose a player..." />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -288,7 +288,7 @@ export function LiveMatch() {
                             <Badge variant="outline" className={`ml-2 text-xs ${
                               player.bettingPool < 10 ? 'bg-red-50 text-red-600 border-red-200' : 
                               player.bettingPool < 100 ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 
-                              'bg-green-50 text-green-600 border-green-200'
+                              'bg-blue-50 text-blue-600 border-blue-200'
                             }`}>
                               Pool: {player.bettingPool}
                             </Badge>
@@ -314,7 +314,7 @@ export function LiveMatch() {
                     min="10"
                     max={selectedBettor ? Math.min(100, state.players.find(p => p.id === selectedBettor)?.bettingPool || 0) : 100}
                     step="10"
-                    className="border-slate-200 focus:border-green-500 focus:ring-green-500/20"
+                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                     required
                     disabled={!isBettingOpen}
                   />
@@ -325,7 +325,7 @@ export function LiveMatch() {
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-slate-700">Predicted Winner</label>
                   <Select value={selectedWinner} onValueChange={setSelectedWinner} required disabled={!isBettingOpen}>
-                    <SelectTrigger className="bg-white border-slate-200 focus:border-green-500 focus:ring-green-500/20">
+                    <SelectTrigger className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
                       <SelectValue placeholder="Select winner..." />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -342,7 +342,8 @@ export function LiveMatch() {
               )}
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg py-3 text-base text-white"
+                size="lg"
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg text-white"
                 disabled={!isBettingOpen}
               >
                 <Coins className="mr-2 h-5 w-5" />
@@ -381,7 +382,7 @@ export function LiveMatch() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <Badge variant="outline" className="font-semibold text-green-600">
+                    <Badge variant="outline" className="font-semibold text-blue-600">
                       {bet.points} points
                     </Badge>
                     <div className="text-xs text-gray-500 mt-1">
