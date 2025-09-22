@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../hooks/useApp';
 import type { Player } from '../types';
-import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { UserPlus, Trash2, Trophy, Target, Lock, LogOut, Eye, EyeOff, ChevronDown, ChevronUp, Save, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ const ADMIN_USERNAME = 'Admin';
 const ADMIN_PASSWORD = 'pingpong321';
 
 export function PlayerManagement() {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, saveData } = useApp();
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
@@ -84,12 +84,30 @@ export function PlayerManagement() {
     setNewPlayerName('');
     setAddPlayerMessage('Player added successfully!');
     
+    // Save data after adding a player
+    saveData();
+    
     // Clear success message after 3 seconds
     setTimeout(() => setAddPlayerMessage(''), 3000);
   };
 
   const handleDeletePlayer = (playerId: string) => {
     dispatch({ type: 'DELETE_PLAYER', payload: { playerId } });
+    // Save data after deleting a player
+    saveData();
+  };
+  
+  // Format the last saved time
+  const formatLastSaved = () => {
+    if (!state.lastSaved) return 'Never';
+    
+    const lastSaved = new Date(state.lastSaved);
+    return lastSaved.toLocaleTimeString();
+  };
+  
+  // Handle manual save
+  const handleManualSave = () => {
+    saveData();
   };
 
   const sortedPlayers = [...state.players].sort((a, b) => b.elo - a.elo);
@@ -104,23 +122,54 @@ export function PlayerManagement() {
             </div>
             Player Management
           </div>
-          {isAuthenticated && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleLogout}
-              className="text-slate-600 hover:text-slate-700 border-slate-300"
-            >
-              <LogOut className="mr-1 h-3 w-3" />
-              Logout
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleManualSave}
+                className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100"
+                disabled={state.isSaving}
+              >
+                {state.isSaving ? (
+                  <>
+                    <Clock className="mr-1 h-3 w-3 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-1 h-3 w-3" />
+                    Save
+                  </>
+                )}
+              </Button>
+            )}
+            {isAuthenticated && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-slate-600 hover:text-slate-700 border-slate-300"
+              >
+                <LogOut className="mr-1 h-3 w-3" />
+                Logout
+              </Button>
+            )}
+          </div>
         </CardTitle>
-        <CardDescription className="text-sm">
-          {isAuthenticated 
-            ? "Add and manage players in your ping pong league" 
-            : "View players and login as admin to manage them"
-          }
+        <CardDescription className="text-sm flex justify-between items-center">
+          <span>
+            {isAuthenticated 
+              ? "Add and manage players in your ping pong league" 
+              : "View players and login as admin to manage them"
+            }
+          </span>
+          {state.lastSaved && (
+            <span className="text-xs text-slate-500 flex items-center gap-1">
+              <Clock size={12} />
+              Last saved: {formatLastSaved()}
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
