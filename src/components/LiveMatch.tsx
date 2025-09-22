@@ -15,7 +15,7 @@ export function LiveMatch() {
   const [bettingTimeLeft, setBettingTimeLeft] = useState<number>(0);
   const [betError, setBetError] = useState('');
   
-  const BETTING_WINDOW_SECONDS = 120; // 2 minutes
+  const BETTING_WINDOW_SECONDS = 30; // 30 seconds
 
   const currentMatch = state.currentMatch;
   const matchBets = currentMatch ? state.bets.filter(bet => bet.matchId === currentMatch.id) : [];
@@ -264,7 +264,7 @@ export function LiveMatch() {
           <CardDescription className={`text-base ${!isBettingOpen ? 'text-red-600' : ''}`}>
             {isBettingOpen 
               ? 'Place your bets on who you think will win this match' 
-              : 'Betting is only available for the first 2 minutes after a match starts.'
+              : 'Betting is only available for the first 30 seconds after a match starts.'
             }
           </CardDescription>
         </CardHeader>
