@@ -285,26 +285,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadInitialData();
   }, []);
 
-  // Function to save data manually
-  const saveData = useCallback(async () => {
-    console.log('💾 Save data requested from AppContext');
+  // Function to save data manually  
+  const saveData = useCallback(async (priority: boolean = false) => {
+    console.log(`💾 Save data requested from AppContext (priority: ${priority})`);
     dispatch({ type: 'SET_SAVING', payload: { isSaving: true } });
     
       try {
         console.log('📁 Saving data with:', {
           players: state.players.length,
-          matches: state.matches.length
+          matches: state.matches.length,
+          priority
         });
         
         const result = await saveGameData({
           players: state.players,
           matches: state.matches
-        });
+        }, priority);
       
       if (result.success && result.savedAt) {
         console.log('✅ Save successful in AppContext', {
           savedAt: result.savedAt,
-          isThrottled: result.url === 'throttled'
+          throttled: result.throttled,
+          priority: result.priority
         });
         dispatch({ type: 'SAVE_DATA_SUCCESS', payload: { savedAt: result.savedAt } });
       } else {
@@ -319,14 +321,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.players, state.matches]);
 
-  // Auto-save when matches are completed
+  // Auto-save when matches are completed (with priority)
   useEffect(() => {
     const lastMatch = state.matches[state.matches.length - 1];
     if (lastMatch && lastMatch.status === 'completed') {
       // Only auto-save if we're not already saving and there's no error
       if (!state.isSaving && !state.error) {
-        console.log('🏆 Auto-saving after match completion');
-        saveData();
+        console.log('🏆 Priority auto-saving after match completion');
+        saveData(true); // Use priority save for match completions
       }
     }
   }, [state.matches, state.isSaving, state.error, saveData]);
