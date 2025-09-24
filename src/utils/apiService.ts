@@ -8,6 +8,11 @@ export interface GameData {
 
 // Rate limiting configuration
 const SAVE_THROTTLE_MS = 60000; // 1 minute between saves
+
+// PRIORITY SAVE FEATURE:
+// The saveGameData function now accepts a 'priority' parameter.
+// Priority saves bypass client-side throttling and server-side rate limiting
+// to ensure immediate persistence of critical data like match completions.
 let lastSaveTime = 0;
 let pendingSaveData: GameData | null = null;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -17,6 +22,8 @@ export interface SaveResponse {
   url?: string;
   savedAt?: string;
   error?: string;
+  throttled?: boolean;
+  priority?: boolean;
 }
 
 export interface LoadResponse {
@@ -31,7 +38,7 @@ export interface LoadResponse {
 const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development';
 const STORAGE_KEY = 'pingpong-game-data';
 
-export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promise<SaveResponse> => {
+export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>, priority: boolean = false): Promise<SaveResponse> => {
   try {
     console.log('🔄 Save operation initiated');
     const dataToSave: GameData = {
@@ -51,6 +58,12 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
 
     // Store the latest data to be saved
     pendingSaveData = dataToSave;
+    
+    // If this is a priority save, bypass throttling
+    if (priority) {
+      console.log('🚨 Priority save - bypassing throttling');
+      return await executeSave(dataToSave, true);
+    }
     
     // If we're within the throttle window, schedule a save for later
     const now = Date.now();
@@ -74,7 +87,7 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
       // Schedule the actual save
       saveTimeout = setTimeout(() => {
         console.log('⏰ Executing delayed save operation');
-        executeSave(dataToSave);
+        executeSave(dataToSave, false);
       }, timeUntilNextSave);
       
       return pendingResponse;
@@ -82,7 +95,7 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
     
     // If we're outside the throttle window, save immediately
     console.log('💾 Executing immediate save operation');
-    return await executeSave(dataToSave);
+    return await executeSave(dataToSave, false);
   } catch (error) {
     console.error('Error saving game data:', error);
     return {
@@ -93,7 +106,7 @@ export const saveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promi
 };
 
 // Helper function to execute the actual save operation
-const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
+const executeSave = async (dataToSave: GameData, priority: boolean = false): Promise<SaveResponse> => {
   try {
     console.log('📤 Sending save request to server...');
     const response = await fetch('/api/save-game-data', {
@@ -101,7 +114,7 @@ const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(dataToSave),
+      body: JSON.stringify({ gameData: dataToSave, priority }),
     });
 
     const result = await response.json();
@@ -116,7 +129,8 @@ const executeSave = async (dataToSave: GameData): Promise<SaveResponse> => {
     
     console.log('✅ Save completed successfully', {
       savedAt: result.savedAt,
-      throttled: result.url === 'throttled',
+      throttled: result.throttled,
+      priority: result.priority,
       timestamp: new Date().toLocaleTimeString()
     });
     
@@ -207,38 +221,8 @@ export const loadGameData = async (forceRefresh = false): Promise<LoadResponse> 
 
 // Force a save operation immediately, bypassing throttling
 export const forceSaveGameData = async (gameData: Omit<GameData, 'lastSaved'>): Promise<SaveResponse> => {
-  try {
-    console.log('🔴 Force save operation initiated');
-    const dataToSave: GameData = {
-      ...gameData,
-      lastSaved: new Date().toISOString()
-    };
-    
-    if (isDevelopment) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      console.log('Game data force-saved to localStorage (development mode)');
-      return {
-        success: true,
-        savedAt: dataToSave.lastSaved
-      };
-    }
-    
-    // Clear any pending save
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-      saveTimeout = null;
-    }
-    
-    // Execute the save immediately
-    console.log('🚨 Executing forced save operation');
-    return await executeSave(dataToSave);
-  } catch (error) {
-    console.error('Error force-saving game data:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
-  }
+  console.log('🔴 Force save operation initiated - using priority save');
+  return await saveGameData(gameData, true);
 };
 
 // Debug utilities for development
