@@ -22,12 +22,6 @@ A comprehensive ping pong matchmaking, ranking, and live betting platform built 
 - Starting ELO of 1200 for new players
 - Automatic rating updates after each match
 
-### 🎰 Live Betting
-- Real-time betting during active matches
-- Simple odds calculation based on ELO difference
-- Track all bets with bettor names and amounts
-- Automatic bet resolution when matches complete
-
 ### 🏆 Leaderboard & Statistics
 - Real-time ranking based on ELO ratings
 - Visual rank indicators (gold, silver, bronze)
